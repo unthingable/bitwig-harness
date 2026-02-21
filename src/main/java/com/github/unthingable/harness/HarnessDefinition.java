@@ -48,12 +48,12 @@ public class HarnessDefinition extends ControllerExtensionDefinition {
 
     @Override
     public int getNumMidiInPorts() {
-        return 0;
+        return 1;
     }
 
     @Override
     public int getNumMidiOutPorts() {
-        return 0;
+        return 1;
     }
 
     @Override

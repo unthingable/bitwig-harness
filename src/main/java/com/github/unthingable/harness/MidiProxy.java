@@ -17,9 +17,15 @@ public class MidiProxy {
             int status = statusByte & 0xF0;
             clientManager.broadcast("/midi/in", channel, status, data1, data2);
         });
+
+        midiIn.setSysexCallback(hex -> clientManager.broadcast("/midi/sysex/in", hex));
     }
 
     public void sendMidi(int channel, int status, int data1, int data2) {
         midiOut.sendMidi(status | channel, data1, data2);
+    }
+
+    public void sendSysex(String hex) {
+        midiOut.sendSysex(hex);
     }
 }

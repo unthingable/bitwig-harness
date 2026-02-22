@@ -111,6 +111,11 @@ public class HarnessExtension extends ControllerExtension {
             midiProxy.sendMidi(channel, status, data1, data2);
         });
 
+        addressSpace.registerMethod("/midi/sysex/send", ",s", "Send sysex to virtual port", (source, message) -> {
+            String hex = message.getArguments().get(0).toString();
+            midiProxy.sendSysex(hex);
+        });
+
         // Transport controls
         addressSpace.registerMethod("/transport/play", ",", "Play", (source, message) -> {
             transport.play();

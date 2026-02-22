@@ -24,7 +24,7 @@ The agent speaks only OSC. The harness handles everything else.
 - Maven
 - Bitwig Studio 5.3+ (Extension API 21)
 - A virtual MIDI port for the MIDI proxy (see setup below)
-- `oscsend` / `oscdump` for manual testing (from [liblo](https://github.com/radarsat1/liblo))
+- Python 3 (for included OSC tools) or `oscsend` / `oscdump` from [liblo](https://github.com/radarsat1/liblo)
 
 ## Build
 
@@ -33,6 +33,24 @@ mvn install
 ```
 
 Builds the extension and copies it to your Bitwig Extensions folder (`~/Documents/Bitwig Studio/Extensions/`).
+
+## Included Tools
+
+`tools/` contains zero-dependency Python scripts that replace liblo's `oscsend`/`oscdump`:
+
+- **`oscsend.py`** — send OSC messages from the command line
+- **`osclisten.py`** — listen for OSC messages (dual-stack IPv4+IPv6, which matters because Bitwig sends from IPv6)
+
+```bash
+# Listen for state updates
+./tools/osclisten.py 9001
+
+# Send a command
+./tools/oscsend.py localhost 9000 /connect i 9001
+./tools/oscsend.py localhost 9000 /transport/play
+```
+
+No installation needed — just Python 3. The quick start examples below use liblo's `oscsend`/`oscdump` syntax, but the included tools work the same way.
 
 ## Quick Start
 
@@ -45,6 +63,7 @@ oscsend localhost 9000 /connect i 9001
 oscsend localhost 9000 /transport/play
 oscsend localhost 9000 /track/select i 2
 oscsend localhost 9000 /midi/send i 0 i 144 i 60 i 127   # Note On C4 on ch0
+oscsend localhost 9000 /midi/sysex/send s "f07e7f0601f7"  # Sysex identity request
 oscsend localhost 9000 /remote_control/set i 0 f 0.5      # Set first param to 50%
 oscsend localhost 9000 /clip/launch i 0 i 0                # Launch clip at track 0, scene 0
 oscsend localhost 9000 /disconnect i 9001
@@ -97,6 +116,8 @@ Both extensions see the same virtual port, but from opposite sides. The harness'
 |---------|------|-----------|-------------|
 | `/midi/send` | `<channel:i> <status:i> <data1:i> <data2:i>` | agent → harness | Send MIDI to extension under test via virtual port |
 | `/midi/in` | `<channel:i> <status:i> <data1:i> <data2:i>` | harness → agent | MIDI received from extension under test |
+| `/midi/sysex/send` | `<hex:s>` | agent → harness | Send sysex to extension under test via virtual port |
+| `/midi/sysex/in` | `<hex:s>` | harness → agent | Sysex received from extension under test |
 
 ### DAW Control
 

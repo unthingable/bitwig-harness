@@ -5,8 +5,6 @@ import com.bitwig.extension.controller.api.Track;
 import com.bitwig.extension.controller.api.TrackBank;
 import com.github.unthingable.harness.ClientManager;
 
-import java.io.IOException;
-
 public class TrackBankObserver {
 
     private final ClientManager clientManager;
@@ -58,12 +56,8 @@ public class TrackBankObserver {
     }
 
     public void sendSnapshot(OscConnection conn) {
-        try {
-            for (int i = 0; i < bankSize; i++) {
-                conn.sendMessage("/state/track", i, names[i], positions[i], types[i]);
-            }
-        } catch (IOException e) {
-            // UDP send failure
+        for (int i = 0; i < bankSize; i++) {
+            clientManager.sendTo(conn, "/state/track", i, names[i], positions[i], types[i]);
         }
     }
 }

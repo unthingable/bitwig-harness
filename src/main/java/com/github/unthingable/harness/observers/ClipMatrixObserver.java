@@ -5,8 +5,6 @@ import com.bitwig.extension.controller.api.ClipLauncherSlotBank;
 import com.bitwig.extension.controller.api.TrackBank;
 import com.github.unthingable.harness.ClientManager;
 
-import java.io.IOException;
-
 public class ClipMatrixObserver {
 
     private final ClientManager clientManager;
@@ -60,20 +58,15 @@ public class ClipMatrixObserver {
     }
 
     public void sendSnapshot(OscConnection conn) {
-        try {
-            for (int t = 0; t < numTracks; t++) {
-                for (int s = 0; s < numScenes; s++) {
-                    if (hasContent[t][s]) {
-                        conn.sendMessage("/state/clip",
-                                t, s,
-                                hasContent[t][s] ? 1 : 0,
-                                isPlaying[t][s] ? 1 : 0,
-                                isRecording[t][s] ? 1 : 0);
-                    }
+        for (int t = 0; t < numTracks; t++) {
+            for (int s = 0; s < numScenes; s++) {
+                if (hasContent[t][s]) {
+                    clientManager.sendTo(conn, "/state/clip",
+                            t, s, 1,
+                            isPlaying[t][s] ? 1 : 0,
+                            isRecording[t][s] ? 1 : 0);
                 }
             }
-        } catch (IOException e) {
-            // UDP send failure
         }
     }
 }

@@ -4,7 +4,6 @@ import com.bitwig.extension.api.opensoundcontrol.OscConnection;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -45,6 +44,14 @@ public class ClientManager {
                     // UDP send failure — log and continue
                 }
             }
+        }
+    }
+
+    public void sendTo(OscConnection conn, String address, Object... args) {
+        try {
+            conn.sendMessage(address, args);
+        } catch (IOException e) {
+            // UDP send failure
         }
     }
 

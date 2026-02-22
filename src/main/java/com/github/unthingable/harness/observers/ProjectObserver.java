@@ -4,8 +4,6 @@ import com.bitwig.extension.api.opensoundcontrol.OscConnection;
 import com.bitwig.extension.controller.api.Application;
 import com.github.unthingable.harness.ClientManager;
 
-import java.io.IOException;
-
 public class ProjectObserver {
 
     private final ClientManager clientManager;
@@ -22,10 +20,6 @@ public class ProjectObserver {
     }
 
     public void sendSnapshot(OscConnection conn) {
-        try {
-            conn.sendMessage("/state/project", projectName);
-        } catch (IOException e) {
-            // UDP send failure
-        }
+        clientManager.sendTo(conn, "/state/project", projectName);
     }
 }

@@ -4,8 +4,6 @@ import com.bitwig.extension.api.opensoundcontrol.OscConnection;
 import com.bitwig.extension.controller.api.CursorTrack;
 import com.github.unthingable.harness.ClientManager;
 
-import java.io.IOException;
-
 public class CursorTrackObserver {
 
     private final ClientManager clientManager;
@@ -30,10 +28,6 @@ public class CursorTrackObserver {
     }
 
     public void sendSnapshot(OscConnection conn) {
-        try {
-            conn.sendMessage("/state/cursor_track", currentIndex, currentName);
-        } catch (IOException e) {
-            // UDP send failure
-        }
+        clientManager.sendTo(conn, "/state/cursor_track", currentIndex, currentName);
     }
 }

@@ -4,8 +4,6 @@ import com.bitwig.extension.api.opensoundcontrol.OscConnection;
 import com.bitwig.extension.controller.api.CursorDevice;
 import com.github.unthingable.harness.ClientManager;
 
-import java.io.IOException;
-
 public class DeviceObserver {
 
     private final ClientManager clientManager;
@@ -30,10 +28,6 @@ public class DeviceObserver {
     }
 
     public void sendSnapshot(OscConnection conn) {
-        try {
-            conn.sendMessage("/state/device", currentName, currentIndex);
-        } catch (IOException e) {
-            // UDP send failure
-        }
+        clientManager.sendTo(conn, "/state/device", currentName, currentIndex);
     }
 }

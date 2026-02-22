@@ -5,8 +5,6 @@ import com.bitwig.extension.controller.api.CursorRemoteControlsPage;
 import com.bitwig.extension.controller.api.RemoteControl;
 import com.github.unthingable.harness.ClientManager;
 
-import java.io.IOException;
-
 public class RemoteControlsObserver {
 
     private final ClientManager clientManager;
@@ -74,13 +72,9 @@ public class RemoteControlsObserver {
     }
 
     public void sendSnapshot(OscConnection conn) {
-        try {
-            conn.sendMessage("/state/remote_control/page", pageName, pageIndex, pageCount);
-            for (int i = 0; i < paramCount; i++) {
-                conn.sendMessage("/state/remote_control/param", i, paramNames[i], (float) paramValues[i]);
-            }
-        } catch (IOException e) {
-            // UDP send failure
+        clientManager.sendTo(conn, "/state/remote_control/page", pageName, pageIndex, pageCount);
+        for (int i = 0; i < paramCount; i++) {
+            clientManager.sendTo(conn, "/state/remote_control/param", i, paramNames[i], (float) paramValues[i]);
         }
     }
 }

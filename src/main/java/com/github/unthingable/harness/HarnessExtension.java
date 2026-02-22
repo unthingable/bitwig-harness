@@ -15,6 +15,7 @@ import com.bitwig.extension.controller.api.TrackBank;
 import com.bitwig.extension.controller.api.Transport;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import com.github.unthingable.harness.observers.ClipMatrixObserver;
@@ -90,7 +91,7 @@ public class HarnessExtension extends ControllerExtension {
 
         // Connection management
         addressSpace.registerMethod("/connect", ",i", "Connect client", (source, message) -> {
-            int port = message.getArguments().get(0) instanceof Number n ? n.intValue() : 0;
+            int port = intArg(message.getArguments(), 0);
             if (clientManager.register(port)) {
                 host.println("Client connected on port " + port);
             } else {
@@ -100,7 +101,7 @@ public class HarnessExtension extends ControllerExtension {
         });
 
         addressSpace.registerMethod("/disconnect", ",i", "Disconnect client", (source, message) -> {
-            int port = message.getArguments().get(0) instanceof Number n ? n.intValue() : 0;
+            int port = intArg(message.getArguments(), 0);
             clientManager.unregister(port);
             host.println("Client disconnected from port " + port);
         });
@@ -108,34 +109,21 @@ public class HarnessExtension extends ControllerExtension {
         // MIDI proxy
         addressSpace.registerMethod("/midi/send", ",iiii", "Send MIDI to virtual port", (source, message) -> {
             var args = message.getArguments();
-            int channel = args.get(0) instanceof Number n ? n.intValue() : 0;
-            int status = args.get(1) instanceof Number n ? n.intValue() : 0;
-            int data1 = args.get(2) instanceof Number n ? n.intValue() : 0;
-            int data2 = args.get(3) instanceof Number n ? n.intValue() : 0;
-            midiProxy.sendMidi(channel, status, data1, data2);
+            midiProxy.sendMidi(intArg(args, 0), intArg(args, 1), intArg(args, 2), intArg(args, 3));
         });
 
         addressSpace.registerMethod("/midi/sysex/send", ",s", "Send sysex to virtual port", (source, message) -> {
-            String hex = message.getArguments().get(0).toString();
-            midiProxy.sendSysex(hex);
+            midiProxy.sendSysex(message.getArguments().get(0).toString());
         });
 
         // Transport controls
-        addressSpace.registerMethod("/transport/play", ",", "Play", (source, message) -> {
-            transport.play();
-        });
-
-        addressSpace.registerMethod("/transport/stop", ",", "Stop", (source, message) -> {
-            transport.stop();
-        });
-
-        addressSpace.registerMethod("/transport/record", ",", "Record", (source, message) -> {
-            transport.record();
-        });
+        addressSpace.registerMethod("/transport/play", ",", "Play", (source, message) -> transport.play());
+        addressSpace.registerMethod("/transport/stop", ",", "Stop", (source, message) -> transport.stop());
+        addressSpace.registerMethod("/transport/record", ",", "Record", (source, message) -> transport.record());
 
         // Track selection
         addressSpace.registerMethod("/track/select", ",i", "Select track by index", (source, message) -> {
-            int index = message.getArguments().get(0) instanceof Number n ? n.intValue() : 0;
+            int index = intArg(message.getArguments(), 0);
             cursorTrack.selectFirst();
             for (int i = 0; i < index; i++) {
                 cursorTrack.selectNext();
@@ -144,7 +132,7 @@ public class HarnessExtension extends ControllerExtension {
 
         // Device selection
         addressSpace.registerMethod("/device/select", ",i", "Select device by index", (source, message) -> {
-            int index = message.getArguments().get(0) instanceof Number n ? n.intValue() : 0;
+            int index = intArg(message.getArguments(), 0);
             cursorDevice.selectFirst();
             for (int i = 0; i < index; i++) {
                 cursorDevice.selectNext();
@@ -152,43 +140,44 @@ public class HarnessExtension extends ControllerExtension {
         });
 
         // Remote controls
-        addressSpace.registerMethod("/remote_control/page/next", ",", "Next remote controls page", (source, message) -> {
-            remoteControls.selectNextPage(false);
-        });
+        addressSpace.registerMethod("/remote_control/page/next", ",", "Next remote controls page",
+                (source, message) -> remoteControls.selectNextPage(false));
 
-        addressSpace.registerMethod("/remote_control/page/prev", ",", "Previous remote controls page", (source, message) -> {
-            remoteControls.selectPreviousPage(false);
-        });
+        addressSpace.registerMethod("/remote_control/page/prev", ",", "Previous remote controls page",
+                (source, message) -> remoteControls.selectPreviousPage(false));
 
         addressSpace.registerMethod("/remote_control/page/select", ",i", "Select remote controls page", (source, message) -> {
-            int index = message.getArguments().get(0) instanceof Number n ? n.intValue() : 0;
-            remoteControls.selectedPageIndex().set(index);
+            remoteControls.selectedPageIndex().set(intArg(message.getArguments(), 0));
         });
 
         addressSpace.registerMethod("/remote_control/set", ",if", "Set remote control value", (source, message) -> {
             var args = message.getArguments();
-            int index = args.get(0) instanceof Number n ? n.intValue() : 0;
-            double value = args.get(1) instanceof Number n ? n.doubleValue() : 0.0;
-            remoteControls.getParameter(index).value().set(value);
+            int index = intArg(args, 0);
+            if (index >= 0 && index < REMOTE_CONTROL_COUNT) {
+                remoteControls.getParameter(index).value().set(doubleArg(args, 1));
+            }
         });
 
         // Track bank
         addressSpace.registerMethod("/track/bank/scroll", ",i", "Scroll track bank", (source, message) -> {
-            int position = message.getArguments().get(0) instanceof Number n ? n.intValue() : 0;
-            trackBank.scrollPosition().set(position);
+            trackBank.scrollPosition().set(intArg(message.getArguments(), 0));
         });
 
         // Clip launcher
         addressSpace.registerMethod("/clip/launch", ",ii", "Launch clip", (source, message) -> {
             var args = message.getArguments();
-            int trackIndex = args.get(0) instanceof Number n ? n.intValue() : 0;
-            int sceneIndex = args.get(1) instanceof Number n ? n.intValue() : 0;
-            trackBank.getItemAt(trackIndex).clipLauncherSlotBank().launch(sceneIndex);
+            int trackIndex = intArg(args, 0);
+            int sceneIndex = intArg(args, 1);
+            if (trackIndex >= 0 && trackIndex < BANK_SIZE && sceneIndex >= 0 && sceneIndex < SCENE_COUNT) {
+                trackBank.getItemAt(trackIndex).clipLauncherSlotBank().launch(sceneIndex);
+            }
         });
 
         addressSpace.registerMethod("/scene/launch", ",i", "Launch scene", (source, message) -> {
-            int sceneIndex = message.getArguments().get(0) instanceof Number n ? n.intValue() : 0;
-            trackBank.sceneBank().launchScene(sceneIndex);
+            int sceneIndex = intArg(message.getArguments(), 0);
+            if (sceneIndex >= 0 && sceneIndex < SCENE_COUNT) {
+                trackBank.sceneBank().launchScene(sceneIndex);
+            }
         });
 
         // Start OSC server
@@ -205,5 +194,13 @@ public class HarnessExtension extends ControllerExtension {
     @Override
     public void flush() {
         // State pushed via observers — nothing to flush
+    }
+
+    private static int intArg(List<?> args, int index) {
+        return args.get(index) instanceof Number n ? n.intValue() : 0;
+    }
+
+    private static double doubleArg(List<?> args, int index) {
+        return args.get(index) instanceof Number n ? n.doubleValue() : 0.0;
     }
 }

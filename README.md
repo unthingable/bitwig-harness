@@ -79,6 +79,8 @@ Multiple clients can connect simultaneously (ports 9001–9016).
 
 ## How the MIDI Proxy Works
 
+This is a convenience feature, handling MIDI comms to the extension under test so you don't have to.
+
 Bitwig controller extensions receive MIDI from MIDI ports — there's no way to inject MIDI directly via the API. The harness solves this by acting as a man-in-the-middle: both the harness and the extension under test connect to the same virtual MIDI port, allowing the agent to send and receive MIDI over OSC.
 
 ```

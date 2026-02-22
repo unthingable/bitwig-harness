@@ -20,6 +20,7 @@ import java.util.Map;
 import com.github.unthingable.harness.observers.ClipMatrixObserver;
 import com.github.unthingable.harness.observers.CursorTrackObserver;
 import com.github.unthingable.harness.observers.DeviceObserver;
+import com.github.unthingable.harness.observers.ProjectObserver;
 import com.github.unthingable.harness.observers.RemoteControlsObserver;
 import com.github.unthingable.harness.observers.TrackBankObserver;
 import com.github.unthingable.harness.observers.TransportObserver;
@@ -60,6 +61,7 @@ public class HarnessExtension extends ControllerExtension {
         MidiProxy midiProxy = new MidiProxy(midiIn, midiOut, clientManager);
 
         // Bitwig API objects
+        var application = host.createApplication();
         Transport transport = host.createTransport();
         CursorTrack cursorTrack = host.createCursorTrack("harness-cursor", "Harness Cursor", 0, 0, true);
         CursorDevice cursorDevice = cursorTrack.createCursorDevice("harness-device", "Harness Device", 0,
@@ -69,6 +71,7 @@ public class HarnessExtension extends ControllerExtension {
         trackBank.followCursorTrack(cursorTrack);
 
         // Observers
+        ProjectObserver projectObserver = new ProjectObserver(application, clientManager);
         TransportObserver transportObserver = new TransportObserver(transport, clientManager);
         CursorTrackObserver cursorTrackObserver = new CursorTrackObserver(cursorTrack, clientManager);
         DeviceObserver deviceObserver = new DeviceObserver(cursorDevice, clientManager);
@@ -77,6 +80,7 @@ public class HarnessExtension extends ControllerExtension {
         ClipMatrixObserver clipMatrixObserver = new ClipMatrixObserver(trackBank, clientManager, BANK_SIZE, SCENE_COUNT);
 
         // Register snapshot providers
+        clientManager.addSnapshotProvider(projectObserver::sendSnapshot);
         clientManager.addSnapshotProvider(transportObserver::sendSnapshot);
         clientManager.addSnapshotProvider(cursorTrackObserver::sendSnapshot);
         clientManager.addSnapshotProvider(deviceObserver::sendSnapshot);

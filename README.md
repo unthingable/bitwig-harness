@@ -1,14 +1,13 @@
 # bitwig-harness
 
-A development harness for Bitwig Studio controller extensions. Observe DAW state, send MIDI, control transport and devices — all over OSC, without hardware.
+A development harness for Bitwig Studio controller extensions. Observe DAW state, send/receive MIDI, control transport and devices — all over OSC, without hardware.
 
 ## What It Does
 
 A single Bitwig extension with two complementary uses:
 
-**Testing harness** (primary) — develop and test controller extensions without hardware. An agent sends MIDI through the harness's proxy, observes how the DAW and the extension under test react, and verifies behavior programmatically.
-
-**OSC controller** — even without an extension under test, the harness provides direct DAW control and live state observation over OSC. Useful for scripting, automation, or building custom control surfaces.
+- **Testing harness** (primary) — operate and test controller extensions with programmatically controlled hardware emulations, especially suited for agentic development
+- **OSC controller** — even without an extension under test, the harness provides basic direct DAW control and live state observation over OSC. Useful for scripting, automation, or building custom control surfaces.
 
 The harness provides:
 
@@ -16,7 +15,18 @@ The harness provides:
 - **State observer** — watches DAW state (transport, tracks, devices, remote controls, clips) and pushes changes over OSC
 - **Command interface** — direct DAW control (transport, track/device selection, clip launching, etc.) via OSC
 
-The agent speaks only OSC. The harness handles everything else.
+### Testing methodology and rationale
+
+Typical controller extension development cycle: develop (write code), verify (load extension, press buttons on hardware, observe what happens), repeat.
+
+This harness allows an external **driver** (not included):
+1. drive the extension (by sending MIDI)
+2. observe the controller state (by receiving MIDI from extension)
+3. observe the state of the project and Bitwig, monitor extension's effects
+
+In other words, programmatic verification/QA. 
+
+The **driver** can be a programmatically controlled emulator, overseen by AI agent who understands controller's MIDI assignments. Point your agent at this repo and test away.
 
 ## Prerequisites
 
@@ -24,7 +34,7 @@ The agent speaks only OSC. The harness handles everything else.
 - Maven
 - Bitwig Studio 5.3+ (Extension API 21)
 - A virtual MIDI port for the MIDI proxy (see setup below)
-- Python 3 (for included OSC tools) or `oscsend` / `oscdump` from [liblo](https://github.com/radarsat1/liblo)
+- (optional) Python 3 (for included OSC tools) or `oscsend` / `oscdump` from [liblo](https://github.com/radarsat1/liblo)
 
 ## Build
 
@@ -71,20 +81,20 @@ oscsend localhost 9000 /disconnect i 9001
 
 ## Connection Protocol
 
-1. Agent sends `/connect` with a reply port — harness immediately sends a full state snapshot
+1. Driver sends `/connect` with a reply port — harness immediately sends a full state snapshot
 2. Harness pushes state changes to all registered clients as they occur
-3. Agent sends `/disconnect` when done
+3. Driver sends `/disconnect` when done
 
 Multiple clients can connect simultaneously (ports 9001–9016).
 
 ## How the MIDI Proxy Works
 
-This is a convenience feature, handling MIDI comms to the extension under test so you don't have to.
+This is a convenience feature, the driver can communicate over MIDI without sending actual MIDI.
 
-Bitwig controller extensions receive MIDI from MIDI ports — there's no way to inject MIDI directly via the API. The harness solves this by acting as a man-in-the-middle: both the harness and the extension under test connect to the same virtual MIDI port, allowing the agent to send and receive MIDI over OSC.
+Bitwig controller extensions receive MIDI from MIDI ports. The harness can act as a man-in-the-middle: both the harness and the extension under test connect to the same virtual MIDI port, allowing the driver to send and receive MIDI over OSC.
 
 ```
-Agent (OSC)                      Bitwig Studio
+Driver (OSC)                      Bitwig Studio
 ───────────────                  ──────────────────────────────────────
                                  ┌──────────────┐   ┌────────────────┐
  /midi/send ────────► Harness ──►│ Virtual MIDI │──►│ Extension      │
@@ -94,10 +104,10 @@ Agent (OSC)                      Bitwig Studio
 ```
 
 **Sending MIDI to the extension under test:**
-Agent sends `/midi/send` → harness writes to its MIDI out port → virtual port carries it → extension under test reads from its MIDI in port.
+Driver sends `/midi/send` → harness writes to its MIDI out port → virtual port carries it → extension under test reads from its MIDI in port.
 
 **Receiving MIDI from the extension under test:**
-Extension writes to its MIDI out port → virtual port → harness reads from its MIDI in port → broadcasts `/midi/in` to all connected agents.
+Extension writes to its MIDI out port → virtual port → harness reads from its MIDI in port → broadcasts `/midi/in` to all connected drivers.
 
 Both extensions see the same virtual port, but from opposite sides. The harness's MIDI out is the extension's MIDI in, and vice versa.
 
@@ -109,34 +119,34 @@ Both extensions see the same virtual port, but from opposite sides. The harness'
 
 | Address | Args | Direction | Description |
 |---------|------|-----------|-------------|
-| `/connect` | `<port:i>` | agent → harness | Register reply port; triggers full state snapshot |
-| `/disconnect` | `<port:i>` | agent → harness | Unregister reply port |
+| `/connect` | `<port:i>` | driver → harness | Register reply port; triggers full state snapshot |
+| `/disconnect` | `<port:i>` | driver → harness | Unregister reply port |
 
 ### MIDI Proxy
 
 | Address | Args | Direction | Description |
 |---------|------|-----------|-------------|
-| `/midi/send` | `<channel:i> <status:i> <data1:i> <data2:i>` | agent → harness | Send MIDI to extension under test via virtual port |
-| `/midi/in` | `<channel:i> <status:i> <data1:i> <data2:i>` | harness → agent | MIDI received from extension under test |
-| `/midi/sysex/send` | `<hex:s>` | agent → harness | Send sysex to extension under test via virtual port |
-| `/midi/sysex/in` | `<hex:s>` | harness → agent | Sysex received from extension under test |
+| `/midi/send` | `<channel:i> <status:i> <data1:i> <data2:i>` | driver → harness | Send MIDI to extension under test via virtual port |
+| `/midi/in` | `<channel:i> <status:i> <data1:i> <data2:i>` | harness → driver | MIDI received from extension under test |
+| `/midi/sysex/send` | `<hex:s>` | driver → harness | Send sysex to extension under test via virtual port |
+| `/midi/sysex/in` | `<hex:s>` | harness → driver | Sysex received from extension under test |
 
 ### DAW Control
 
 | Address | Args | Direction | Description |
 |---------|------|-----------|-------------|
-| `/transport/play` | — | agent → harness | Start playback |
-| `/transport/stop` | — | agent → harness | Stop playback |
-| `/transport/record` | — | agent → harness | Start recording |
-| `/track/select` | `<index:i>` | agent → harness | Select track by index |
-| `/track/bank/scroll` | `<position:i>` | agent → harness | Scroll track bank to position |
-| `/device/select` | `<index:i>` | agent → harness | Select device by index |
-| `/remote_control/page/next` | — | agent → harness | Next remote controls page |
-| `/remote_control/page/prev` | — | agent → harness | Previous remote controls page |
-| `/remote_control/page/select` | `<index:i>` | agent → harness | Select remote controls page by index |
-| `/remote_control/set` | `<index:i> <value:f>` | agent → harness | Set parameter value (0.0–1.0) |
-| `/clip/launch` | `<track:i> <scene:i>` | agent → harness | Launch clip at position |
-| `/scene/launch` | `<scene:i>` | agent → harness | Launch scene |
+| `/transport/play` | — | driver → harness | Start playback |
+| `/transport/stop` | — | driver → harness | Stop playback |
+| `/transport/record` | — | driver → harness | Start recording |
+| `/track/select` | `<index:i>` | driver → harness | Select track by index |
+| `/track/bank/scroll` | `<position:i>` | driver → harness | Scroll track bank to position |
+| `/device/select` | `<index:i>` | driver → harness | Select device by index |
+| `/remote_control/page/next` | — | driver → harness | Next remote controls page |
+| `/remote_control/page/prev` | — | driver → harness | Previous remote controls page |
+| `/remote_control/page/select` | `<index:i>` | driver → harness | Select remote controls page by index |
+| `/remote_control/set` | `<index:i> <value:f>` | driver → harness | Set parameter value (0.0–1.0) |
+| `/clip/launch` | `<track:i> <scene:i>` | driver → harness | Launch clip at position |
+| `/scene/launch` | `<scene:i>` | driver → harness | Launch scene |
 
 ### State Updates (pushed on change)
 
@@ -152,7 +162,7 @@ Both extensions see the same virtual port, but from opposite sides. The harness'
 
 ## Virtual MIDI Port Setup
 
-The MIDI proxy uses a virtual MIDI port to communicate with the extension under test. This is a one-time setup per OS.
+A virtual MIDI port to communicate between the driver and the extension under test. This is a one-time setup per OS.
 
 ### macOS — IAC Driver
 
@@ -196,7 +206,7 @@ After completing basic setup, wire the MIDI proxy to a virtual MIDI port:
 5. In the Harness controller settings, set **MIDI In** and **MIDI Out** to the virtual MIDI port (e.g. "IAC Driver Bitwig Harness")
 6. In the extension under test's controller settings, set its **MIDI In** to the same virtual MIDI port
 
-The key: both extensions share the same virtual port. The harness's MIDI out becomes the extension's MIDI in. When the extension sends MIDI out, the harness picks it up on its MIDI in and forwards it to agents as `/midi/in`.
+The key: both extensions share the same virtual port. The harness's MIDI out becomes the extension's MIDI in. When the extension sends MIDI out, the harness picks it up on its MIDI in and forwards it to drivers as `/midi/in`.
 
 ## Agent Reference
 

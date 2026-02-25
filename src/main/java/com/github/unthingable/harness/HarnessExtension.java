@@ -173,12 +173,24 @@ public class HarnessExtension extends ControllerExtension {
             }
         });
 
+        addressSpace.registerMethod("/clip/create", ",ii", "Create empty clip", (source, message) -> {
+            var args = message.getArguments();
+            int trackIndex = intArg(args, 0);
+            int sceneIndex = intArg(args, 1);
+            if (trackIndex >= 0 && trackIndex < BANK_SIZE && sceneIndex >= 0 && sceneIndex < SCENE_COUNT) {
+                trackBank.getItemAt(trackIndex).clipLauncherSlotBank().createEmptyClip(sceneIndex, 4);
+            }
+        });
+
         addressSpace.registerMethod("/scene/launch", ",i", "Launch scene", (source, message) -> {
             int sceneIndex = intArg(message.getArguments(), 0);
             if (sceneIndex >= 0 && sceneIndex < SCENE_COUNT) {
                 trackBank.sceneBank().launchScene(sceneIndex);
             }
         });
+
+        // Application actions
+        addressSpace.registerMethod("/undo", ",", "Undo", (source, message) -> application.undo());
 
         // Start OSC server
         oscModule.createUdpServer(OSC_PORT, addressSpace);

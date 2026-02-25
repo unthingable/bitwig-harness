@@ -146,7 +146,9 @@ Both extensions see the same virtual port, but from opposite sides. The harness'
 | `/remote_control/page/select` | `<index:i>` | driver → harness | Select remote controls page by index |
 | `/remote_control/set` | `<index:i> <value:f>` | driver → harness | Set parameter value (0.0–1.0) |
 | `/clip/launch` | `<track:i> <scene:i>` | driver → harness | Launch clip at position |
+| `/clip/create` | `<track:i> <scene:i>` | driver → harness | Create empty clip (4 bars) |
 | `/scene/launch` | `<scene:i>` | driver → harness | Launch scene |
+| `/undo` | — | driver → harness | Undo last action |
 
 ### State Updates (pushed on change)
 
@@ -155,7 +157,8 @@ Both extensions see the same virtual port, but from opposite sides. The harness'
 | `/state/transport` | `<state:s>` (playing/stopped/recording) | Transport state |
 | `/state/cursor_track` | `<index:i> <name:s>` | Selected track |
 | `/state/device` | `<name:s> <index:i>` | Selected device |
-| `/state/track` | `<bank_index:i> <name:s> <position:i> <type:s>` | Track in bank (8 tracks) |
+| `/state/track` | `<bank_index:i> <name:s> <position:i> <type:s> <mute:i> <solo:i> <arm:i> <volume:f>` | Track in bank (8 tracks) |
+| `/state/track_bank` | `<scroll_position:i>` | Track bank scroll offset |
 | `/state/remote_control/page` | `<name:s> <index:i> <count:i>` | Current remote controls page |
 | `/state/remote_control/param` | `<index:i> <name:s> <value:f>` | Remote control parameter (8 params) |
 | `/state/clip` | `<track:i> <scene:i> <has_content:i> <is_playing:i> <is_recording:i>` | Clip slot state (8×8 grid) |
